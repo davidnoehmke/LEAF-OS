@@ -1,0 +1,250 @@
+{% liquid
+  assign heading_level = 'h1'
+  if section.index > 1
+    assign heading_level = 'h2'
+  endif
+%}
+
+<section
+  class="substrate-world substrate-world--{{ section.settings.color_scheme }}"
+  style="--section-top: {{ section.settings.padding_top }}px; --section-bottom: {{ section.settings.padding_bottom }}px; --hero-min-height: {{ section.settings.hero_height }}px;"
+>
+  <div class="substrate-world__hero">
+    {% if section.settings.hero_image != blank %}
+      <picture class="substrate-world__hero-media">
+        {% if section.settings.hero_image_mobile != blank %}
+          <source media="(max-width: 749px)" srcset="{{ section.settings.hero_image_mobile | image_url: width: 1000 }}">
+        {% endif %}
+        {{ section.settings.hero_image | image_url: width: 2400 | image_tag: widths: '750, 1100, 1500, 2000, 2400', sizes: '100vw', loading: 'eager', fetchpriority: 'high', alt: section.settings.hero_alt }}
+      </picture>
+    {% else %}
+      <div class="substrate-world__hero-placeholder" aria-hidden="true"></div>
+    {% endif %}
+    <div class="substrate-world__overlay" style="--overlay-opacity: {{ section.settings.overlay | divided_by: 100.0 }}"></div>
+    <div class="substrate-world__hero-copy page-width substrate-world__align--{{ section.settings.text_alignment }}">
+      {% if section.settings.eyebrow != blank %}<p class="substrate-world__eyebrow">{{ section.settings.eyebrow }}</p>{% endif %}
+      <{{ heading_level }} class="substrate-world__title">{{ section.settings.heading }}</{{ heading_level }}>
+      {% if section.settings.intro != blank %}<div class="substrate-world__intro rte">{{ section.settings.intro }}</div>{% endif %}
+      {% if section.settings.button_label != blank %}
+        <a class="substrate-world__button" href="{{ section.settings.button_link | default: '#substrate-world-content' }}">{{ section.settings.button_label }}</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div id="substrate-world-content" class="substrate-world__content page-width">
+    {% if section.settings.content_heading != blank or section.settings.content_text != blank %}
+      <header class="substrate-world__section-head">
+        {% if section.settings.content_heading != blank %}<h2>{{ section.settings.content_heading }}</h2>{% endif %}
+        {% if section.settings.content_text != blank %}<div class="rte">{{ section.settings.content_text }}</div>{% endif %}
+      </header>
+    {% endif %}
+
+    {% assign current_group = '' %}
+    {% for block in section.blocks %}
+      {% if block.type == 'heading' %}
+        {% if current_group != '' %}</div></div>{% endif %}
+        {% assign current_group = block.id %}
+        <div class="substrate-world__group" {{ block.shopify_attributes }}>
+          <header class="substrate-world__group-head">
+            {% if block.settings.eyebrow != blank %}<p>{{ block.settings.eyebrow }}</p>{% endif %}
+            <h2>{{ block.settings.heading }}</h2>
+            {% if block.settings.text != blank %}<div class="rte">{{ block.settings.text }}</div>{% endif %}
+          </header>
+          <div class="substrate-world__cards substrate-world__cards--{{ block.settings.columns }}">
+      {% elsif block.type == 'mixture' or block.type == 'ingredient' %}
+        {% liquid
+          assign card_product = block.settings.product
+          assign card_image = block.settings.image
+          if card_image == blank and card_product != blank
+            assign card_image = card_product.featured_image
+          endif
+          assign card_link = block.settings.link
+          if card_link == blank and card_product != blank
+            assign card_link = card_product.url
+          endif
+          assign card_title = block.settings.title
+          if card_title == blank and card_product != blank
+            assign card_title = card_product.title
+          endif
+        %}
+        <article class="substrate-world__card substrate-world__card--{{ block.type }}" {{ block.shopify_attributes }}>
+          {% if card_image != blank %}
+            <a class="substrate-world__card-media" href="{{ card_link | default: '#' }}" {% if card_link == blank %}aria-disabled="true"{% endif %}>
+              {{ card_image | image_url: width: 1100 | image_tag: widths: '360, 540, 760, 1100', sizes: '(min-width: 990px) 30vw, (min-width: 650px) 46vw, 92vw', loading: 'lazy', alt: block.settings.image_alt }}
+            </a>
+          {% endif %}
+          <div class="substrate-world__card-copy">
+            <p class="substrate-world__card-type">{% if block.type == 'mixture' %}{{ block.settings.badge | default: 'Spezialmischung' }}{% else %}{{ block.settings.badge | default: 'Bestandteil' }}{% endif %}</p>
+            <h3>{{ card_title }}</h3>
+            {% if block.settings.claim != blank %}<p class="substrate-world__claim">{{ block.settings.claim }}</p>{% endif %}
+            {% if block.settings.ratio != blank %}<p class="substrate-world__ratio"><strong>Mischverhältnis:</strong> {{ block.settings.ratio }}</p>{% endif %}
+            {% if block.settings.text != blank %}<div class="rte">{{ block.settings.text }}</div>{% endif %}
+            {% if card_product != blank and block.settings.show_price %}<p class="substrate-world__price">{{ card_product.price | money }}</p>{% endif %}
+            {% if block.settings.button_label != blank and card_link != blank %}<a class="substrate-world__text-link" href="{{ card_link }}">{{ block.settings.button_label }} <span aria-hidden="true">→</span></a>{% endif %}
+          </div>
+        </article>
+      {% elsif block.type == 'faq' %}
+        {% if current_group != '' %}</div></div>{% assign current_group = '' %}{% endif %}
+        <details class="substrate-world__faq" {{ block.shopify_attributes }}>
+          <summary>{{ block.settings.question }} <span aria-hidden="true">+</span></summary>
+          <div class="rte">{{ block.settings.answer }}</div>
+        </details>
+      {% endif %}
+    {% endfor %}
+    {% if current_group != '' %}</div></div>{% endif %}
+  </div>
+</section>
+
+{% stylesheet %}
+  .substrate-world { background: var(--background); color: var(--text); }
+  .substrate-world__hero { position: relative; min-height: var(--hero-min-height); display: grid; align-items: end; overflow: hidden; background: #26351f; color: #fff; }
+  .substrate-world__hero-media, .substrate-world__hero-media img, .substrate-world__hero-placeholder, .substrate-world__overlay { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .substrate-world__hero-media img { object-fit: cover; object-position: center; }
+  .substrate-world__hero-placeholder { background: radial-gradient(circle at 75% 25%, #91aa78 0, transparent 27%), linear-gradient(135deg, #1f2f18, #566f45); }
+  .substrate-world__overlay { background: linear-gradient(90deg, rgba(11, 20, 8, var(--overlay-opacity)), rgba(11, 20, 8, calc(var(--overlay-opacity) * .25))); }
+  .substrate-world__hero-copy { position: relative; z-index: 1; width: 100%; padding-block: clamp(3rem, 9vw, 7rem); }
+  .substrate-world__align--center { text-align: center; }
+  .substrate-world__align--center .substrate-world__intro { margin-inline: auto; }
+  .substrate-world__eyebrow, .substrate-world__group-head > p, .substrate-world__card-type { margin: 0 0 .65rem; font-size: .75rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+  .substrate-world__eyebrow { color: #dce8bc; }
+  .substrate-world__title { max-width: 960px; margin: 0; font-size: clamp(2.8rem, 8vw, 7rem); line-height: .92; letter-spacing: -.065em; text-wrap: balance; }
+  .substrate-world__intro { max-width: 720px; margin-top: 1.25rem; font-size: clamp(1rem, 2vw, 1.3rem); line-height: 1.55; }
+  .substrate-world__button { margin-top: 1.5rem; display: inline-flex; padding: .9rem 1.25rem; border-radius: 999px; background: #f1f0e8; color: #172112; font-weight: 800; text-decoration: none; }
+  .substrate-world__content { padding-block: var(--section-top) var(--section-bottom); }
+  .substrate-world__section-head, .substrate-world__group-head { max-width: 820px; }
+  .substrate-world__section-head h2, .substrate-world__group-head h2 { margin: 0 0 .8rem; font-size: clamp(2rem, 5vw, 4rem); line-height: 1; letter-spacing: -.045em; text-wrap: balance; }
+  .substrate-world__group { margin-top: clamp(3rem, 8vw, 6rem); }
+  .substrate-world__group-head > p { color: var(--accent); }
+  .substrate-world__cards { margin-top: 1.5rem; display: grid; gap: clamp(1rem, 2vw, 1.5rem); }
+  .substrate-world__cards--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .substrate-world__cards--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .substrate-world__cards--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .substrate-world__card { min-width: 0; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-large); background: color-mix(in srgb, var(--background), var(--text) 3%); }
+  .substrate-world__card-media { aspect-ratio: 4 / 3; display: block; overflow: hidden; background: #e9eadf; }
+  .substrate-world__card-media img { width: 100%; height: 100%; object-fit: cover; transition: transform .35s ease; }
+  .substrate-world__card:hover .substrate-world__card-media img { transform: scale(1.025); }
+  .substrate-world__card-copy { padding: clamp(1.15rem, 2.5vw, 1.75rem); }
+  .substrate-world__card-type { color: var(--accent); }
+  .substrate-world__card h3 { margin: 0; font-size: clamp(1.4rem, 2.5vw, 2rem); line-height: 1.05; overflow-wrap: anywhere; }
+  .substrate-world__claim { margin: .6rem 0; font-weight: 700; }
+  .substrate-world__ratio { margin: 1rem 0; padding: .75rem; border-radius: calc(var(--radius) * .75); background: color-mix(in srgb, var(--accent), transparent 90%); font-size: .9rem; }
+  .substrate-world__price { font-size: 1.1rem; font-weight: 800; }
+  .substrate-world__text-link { display: inline-flex; gap: .4rem; margin-top: .8rem; color: inherit; font-weight: 800; text-underline-offset: .2em; }
+  .substrate-world__faq { max-width: 900px; margin: 1rem auto 0; border-bottom: 1px solid var(--border); }
+  .substrate-world__faq summary { padding: 1.15rem 0; display: flex; justify-content: space-between; gap: 1rem; cursor: pointer; font-weight: 800; list-style: none; }
+  .substrate-world__faq summary::-webkit-details-marker { display: none; }
+  .substrate-world__faq[open] summary span { transform: rotate(45deg); }
+  .substrate-world__faq .rte { padding-bottom: 1.25rem; }
+  @media (max-width: 989px) { .substrate-world__cards--3, .substrate-world__cards--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 649px) {
+    .substrate-world__hero { min-height: min(760px, 86svh); }
+    .substrate-world__hero-copy { padding-block: 2.5rem; }
+    .substrate-world__title { font-size: clamp(2.45rem, 13vw, 4.3rem); line-height: .94; }
+    .substrate-world__intro { font-size: 1rem; line-height: 1.5; }
+    .substrate-world__cards--2, .substrate-world__cards--3, .substrate-world__cards--4 { grid-template-columns: 1fr; }
+    .substrate-world__card-media { aspect-ratio: 1 / 1; }
+    .substrate-world__section-head h2, .substrate-world__group-head h2 { font-size: clamp(2rem, 10vw, 3rem); }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "LEAFer Substratwelt",
+  "tag": "section",
+  "class": "section-substrate-world",
+  "max_blocks": 32,
+  "settings": [
+    { "type": "header", "content": "Hero" },
+    { "type": "image_picker", "id": "hero_image", "label": "Hero-Bild Desktop" },
+    { "type": "image_picker", "id": "hero_image_mobile", "label": "Hero-Bild Mobil" },
+    { "type": "text", "id": "hero_alt", "label": "Alternativtext Hero-Bild", "default": "LEAFerservice Substratmischungen und natürliche Bestandteile" },
+    { "type": "text", "id": "eyebrow", "label": "Kleine Überschrift", "default": "Mischen. Verstehen. Wachsen lassen." },
+    { "type": "inline_richtext", "id": "heading", "label": "Hauptüberschrift", "default": "Substrate, die zu deiner Pflanze passen" },
+    { "type": "richtext", "id": "intro", "label": "Einleitung", "default": "<p>Starte mit einer erprobten Spezialmischung oder baue dein Substrat aus einzelnen Bestandteilen selbst auf. Jede Rezeptur bleibt transparent und anpassbar.</p>" },
+    { "type": "text", "id": "button_label", "label": "Button-Beschriftung", "default": "Mischungen entdecken" },
+    { "type": "url", "id": "button_link", "label": "Button-Link" },
+    { "type": "select", "id": "text_alignment", "label": "Textausrichtung", "options": [{ "value": "left", "label": "Links" }, { "value": "center", "label": "Zentriert" }], "default": "left" },
+    { "type": "range", "id": "overlay", "label": "Bildabdunklung", "min": 0, "max": 90, "step": 5, "default": 55, "unit": "%" },
+    { "type": "range", "id": "hero_height", "label": "Hero-Mindesthöhe Desktop", "min": 420, "max": 900, "step": 20, "default": 680, "unit": "px" },
+    { "type": "header", "content": "Einführung" },
+    { "type": "inline_richtext", "id": "content_heading", "label": "Überschrift", "default": "Deine Pflanze gibt die Richtung vor" },
+    { "type": "richtext", "id": "content_text", "label": "Text", "default": "<p>Wurzeln brauchen je nach Pflanzenart unterschiedlich viel Luft, Feuchtigkeit und Halt. Deshalb zeigen wir nicht nur fertige Mischungen, sondern auch, welche Aufgabe jeder Bestandteil übernimmt.</p>" },
+    { "type": "header", "content": "Darstellung" },
+    { "type": "select", "id": "color_scheme", "label": "Farbstimmung", "options": [{ "value": "default", "label": "Theme-Standard" }, { "value": "soft", "label": "Ruhig" }], "default": "default" },
+    { "type": "range", "id": "padding_top", "label": "Abstand oben", "min": 24, "max": 120, "step": 8, "default": 72, "unit": "px" },
+    { "type": "range", "id": "padding_bottom", "label": "Abstand unten", "min": 24, "max": 120, "step": 8, "default": 88, "unit": "px" }
+  ],
+  "blocks": [
+    {
+      "type": "heading",
+      "name": "Bereichsüberschrift",
+      "settings": [
+        { "type": "text", "id": "eyebrow", "label": "Kleine Überschrift", "default": "Spezialmischungen" },
+        { "type": "inline_richtext", "id": "heading", "label": "Überschrift", "default": "Fertig abgestimmt, trotzdem nachvollziehbar" },
+        { "type": "richtext", "id": "text", "label": "Text", "default": "<p>Wähle eine Mischung als verlässliche Basis. Die Rezeptur zeigt dir, warum sie zur jeweiligen Pflanzengruppe passt.</p>" },
+        { "type": "select", "id": "columns", "label": "Spalten Desktop", "options": [{ "value": "2", "label": "2" }, { "value": "3", "label": "3" }, { "value": "4", "label": "4" }], "default": "3" }
+      ]
+    },
+    {
+      "type": "mixture",
+      "name": "Spezialmischung",
+      "settings": [
+        { "type": "product", "id": "product", "label": "Shopify-Produkt" },
+        { "type": "image_picker", "id": "image", "label": "Eigenes Bild (optional)" },
+        { "type": "text", "id": "image_alt", "label": "Alternativtext Bild" },
+        { "type": "text", "id": "badge", "label": "Kennzeichnung", "default": "Spezialmischung" },
+        { "type": "text", "id": "title", "label": "Titel (optional)" },
+        { "type": "text", "id": "claim", "label": "Kurzclaim", "default": "Luftige Struktur für vitale Wurzeln" },
+        { "type": "textarea", "id": "ratio", "label": "Mischverhältnis" },
+        { "type": "richtext", "id": "text", "label": "Beschreibung" },
+        { "type": "checkbox", "id": "show_price", "label": "Produktpreis anzeigen", "default": true },
+        { "type": "text", "id": "button_label", "label": "Linktext", "default": "Mischung ansehen" },
+        { "type": "url", "id": "link", "label": "Eigener Link (optional)" }
+      ]
+    },
+    {
+      "type": "ingredient",
+      "name": "Bestandteil",
+      "settings": [
+        { "type": "product", "id": "product", "label": "Shopify-Produkt" },
+        { "type": "image_picker", "id": "image", "label": "Eigenes Bild (optional)" },
+        { "type": "text", "id": "image_alt", "label": "Alternativtext Bild" },
+        { "type": "text", "id": "badge", "label": "Kennzeichnung", "default": "Substratbestandteil" },
+        { "type": "text", "id": "title", "label": "Titel (optional)" },
+        { "type": "text", "id": "claim", "label": "Funktion", "default": "Struktur und Luftführung" },
+        { "type": "textarea", "id": "ratio", "label": "Empfohlener Anteil" },
+        { "type": "richtext", "id": "text", "label": "Beschreibung" },
+        { "type": "checkbox", "id": "show_price", "label": "Produktpreis anzeigen", "default": true },
+        { "type": "text", "id": "button_label", "label": "Linktext", "default": "Bestandteil ansehen" },
+        { "type": "url", "id": "link", "label": "Eigener Link (optional)" }
+      ]
+    },
+    {
+      "type": "faq",
+      "name": "FAQ-Frage",
+      "settings": [
+        { "type": "inline_richtext", "id": "question", "label": "Frage", "default": "Kann ich die Mischverhältnisse verändern?" },
+        { "type": "richtext", "id": "answer", "label": "Antwort", "default": "<p>Ja. Die Rezepturen sind Startpunkte. Passe sie an Pflanzenart, Topf, Standort und deine Gießroutine an.</p>" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "LEAFer Substratwelt",
+      "blocks": [
+        { "type": "heading" },
+        { "type": "mixture", "settings": { "title": "Tropical Mix", "claim": "Luftig und feuchtepuffernd für tropische Zimmerpflanzen", "ratio": "Pinienrinde · Lava · Bims · Perlite · Kokos" } },
+        { "type": "mixture", "settings": { "title": "Aroid Mix", "claim": "Grobe Wurzelstruktur für Monstera, Philodendron und Alocasia", "ratio": "Pinienrinde · Bims · Perlite · Kokos" } },
+        { "type": "mixture", "settings": { "title": "Desert Mix", "claim": "Schnelle Drainage für Kakteen und Sukkulenten", "ratio": "Lava · Bims · Perlite · Blähton" } },
+        { "type": "heading", "settings": { "eyebrow": "Bestandteile", "heading": "Baue deine eigene Rezeptur", "text": "<p>Kombiniere mineralische und organische Komponenten gezielt nach Luftführung, Wasserspeicherung und Standfestigkeit.</p>", "columns": "4" } },
+        { "type": "ingredient", "settings": { "title": "Pinienrinde", "claim": "Grobe organische Struktur", "ratio": "Startbereich: 20–60 Vol.-%" } },
+        { "type": "ingredient", "settings": { "title": "Bims", "claim": "Poröse, dauerhafte Mineralstruktur", "ratio": "Startbereich: 15–40 Vol.-%" } },
+        { "type": "ingredient", "settings": { "title": "Perlite", "claim": "Leichtigkeit und zusätzliche Luftporen", "ratio": "Startbereich: 10–35 Vol.-%" } },
+        { "type": "ingredient", "settings": { "title": "Lava", "claim": "Drainage und Standfestigkeit", "ratio": "Startbereich: 15–40 Vol.-%" } },
+        { "type": "faq" },
+        { "type": "faq", "settings": { "question": "Welche Mischung passt zu meiner Pflanze?", "answer": "<p>Tropische Aroids profitieren meist von einer groben, luftigen Struktur. Sukkulenten und Kakteen benötigen einen höheren Mineralanteil und besonders schnelle Drainage.</p>" } }
+      ]
+    }
+  ]
+}
+{% endschema %}
